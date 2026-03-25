@@ -157,9 +157,9 @@ export default function Codec() {
   }
 
   // Cost savings based on popular LLM input pricing (per 1M tokens)
-  // Input pricing per 1M tokens (latest expensive models)
+  // Input pricing per 1M tokens (latest 2026 models)
   const LLM_PRICES: Record<string, number> = {
-    'GPT-4.5': 75, 'Claude Opus 4': 15, 'o3': 10, 'Gemini 2.5 Pro': 1.25,
+    'GPT-5.4 Pro': 30, 'Claude Opus 4.6': 5, 'GPT-5.4': 2.5, 'Gemini 3 Pro': 2,
   };
   function calcSaved(tokens: number) {
     return Object.entries(LLM_PRICES).map(([name, price]) => ({
@@ -187,7 +187,7 @@ export default function Codec() {
               Saved <b style={{ color: '#00e676' }}>{cumSaved.toLocaleString()}</b> tokens | <b style={{ color: '#00e676' }}>{(cumIn / cumOut).toFixed(1)}x</b> avg
             </span>
             <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.15)', color: '#00e676', fontWeight: 'bold' }}>
-              ~${(cumSaved * 75 / 1_000_000).toFixed(4)} saved (GPT-4.5 pricing)
+              ~${(cumSaved * 30 / 1_000_000).toFixed(4)} saved (GPT-5.4 Pro)
             </span>
           </div>
         )}
@@ -280,14 +280,14 @@ export default function Codec() {
             <div className="flex gap-3 flex-wrap items-center px-3.5 py-1.5" style={{ borderTop: '1px solid #2a2a3a', background: 'rgba(0,230,118,0.03)' }}>
               <span className="text-xs font-bold" style={{ color: '#00e676' }}>If you send {stats.ratio}x less tokens:</span>
               {[100, 1000, 10000].map(n => {
-                const gpt45Saved = (stats.saved * n * 75 / 1_000_000);
+                const saved54pro = (stats.saved * n * 30 / 1_000_000);
                 return (
                   <span key={n} className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.08)', color: '#00e676' }}>
-                    {n.toLocaleString()} calls = <b>${gpt45Saved < 1 ? gpt45Saved.toFixed(2) : gpt45Saved.toFixed(1)}</b>
+                    {n.toLocaleString()} calls = <b>${saved54pro < 1 ? saved54pro.toFixed(2) : saved54pro.toFixed(1)}</b>
                   </span>
                 );
               })}
-              <span className="text-xs" style={{ color: '#8888aa' }}>(GPT-4.5 $75/M tok)</span>
+              <span className="text-xs" style={{ color: '#8888aa' }}>(GPT-5.4 Pro $30/M input)</span>
             </div>
           )}
 
