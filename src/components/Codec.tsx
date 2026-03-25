@@ -12,6 +12,7 @@ export default function Codec() {
   const [encoded, setEncoded] = useState('');
   const [stats, setStats] = useState<Stats | null>(null);
   const [encoding, setEncoding] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Cumulative
   const [cumIn, setCumIn] = useState(0);
@@ -29,6 +30,7 @@ export default function Codec() {
     setEncoding(true);
     setEncoded('');
     setStats(null);
+    setCopied(false);
 
     const t0 = performance.now();
     try {
@@ -51,17 +53,18 @@ export default function Codec() {
     }
   }
 
-  const LLM_PRICES: Record<string, number> = {
-    'GPT-5.4 Pro': 30, 'Claude Opus 4.6': 5, 'GPT-5.4': 2.5, 'Gemini 3 Pro': 2,
-  };
-  function calcSaved(tokens: number) {
-    return Object.entries(LLM_PRICES).map(([name, price]) => ({
-      name, saved: (tokens * price / 1_000_000),
-    }));
+  function copyEncoded() {
+    if (encoded) {
+      navigator.clipboard.writeText(encoded);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   }
 
-  function copyEncoded() {
-    if (encoded) navigator.clipboard.writeText(encoded);
+  function fmtDollar(n: number) {
+    if (n >= 1) return '$' + n.toFixed(1);
+    if (n >= 0.01) return '$' + n.toFixed(2);
+    return '$' + n.toFixed(4);
   }
 
   return (
@@ -75,12 +78,11 @@ export default function Codec() {
           <span className="text-xs ml-2" style={{ color: '#8888aa' }}>-- Compress text before sending to expensive LLMs</span>
         </div>
         {encCount > 0 && (
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-3 items-center">
             <span className="text-xs" style={{ color: '#8888aa' }}>
-              Saved <b style={{ color: '#00e676' }}>{cumSaved.toLocaleString()}</b> tokens | <b style={{ color: '#00e676' }}>{(cumIn / cumOut).toFixed(1)}x</b> avg
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.15)', color: '#00e676', fontWeight: 'bold' }}>
-              ~${(cumSaved * 30 / 1_000_000).toFixed(4)} saved (GPT-5.4 Pro)
+              Session: <b style={{ color: '#00e676' }}>{encCount}</b> compresses |
+              <b style={{ color: '#00e676' }}> {cumSaved.toLocaleString()}</b> tokens saved |
+              <b style={{ color: '#00e676' }}> {(cumIn / cumOut).toFixed(1)}x</b> avg
             </span>
           </div>
         )}
@@ -123,11 +125,54 @@ export default function Codec() {
 
         {/* Output panel */}
         <div className="flex flex-col overflow-hidden">
+          {/* Hero stats banner */}
+          {stats && (
+            <div className="px-4 py-3" style={{ background: 'linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,230,118,0.1))', borderBottom: '1px solid #2a2a3a' }}>
+              <div className="flex items-center gap-5">
+                {/* Big compression ratio */}
+                <div className="flex flex-col items-center">
+                  <div style={{ fontSize: '32px', fontWeight: 900, color: '#00e676', lineHeight: 1 }}>{stats.ratio}x</div>
+                  <div className="text-xs mt-0.5" style={{ color: '#8888aa' }}>compression</div>
+                </div>
+                {/* Divider */}
+                <div style={{ width: 1, height: 40, background: '#2a2a3a' }} />
+                {/* Token reduction */}
+                <div className="flex flex-col">
+                  <div className="flex items-baseline gap-1.5">
+                    <span style={{ fontSize: '18px', fontWeight: 700, color: '#a29bfe' }}>{stats.inTok.toLocaleString()}</span>
+                    <span style={{ fontSize: '14px', color: '#6c5ce7' }}>&rarr;</span>
+                    <span style={{ fontSize: '18px', fontWeight: 700, color: '#00e676' }}>{stats.outTok.toLocaleString()}</span>
+                    <span className="text-xs" style={{ color: '#8888aa' }}>tokens</span>
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: '#8888aa' }}>
+                    <b style={{ color: '#00e676' }}>{stats.saved.toLocaleString()}</b> tokens saved in {stats.time}s
+                  </div>
+                </div>
+                {/* Divider */}
+                <div style={{ width: 1, height: 40, background: '#2a2a3a' }} />
+                {/* Money saved */}
+                <div className="flex flex-col">
+                  <div className="text-xs mb-1" style={{ color: '#8888aa' }}>You save per call:</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {([['GPT-5.4 Pro', 30], ['Opus 4.6', 5], ['GPT-5.4', 2.5]] as [string, number][]).map(([name, price]) => (
+                      <span key={name} className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.1)', color: '#00e676', fontWeight: 600 }}>
+                        {name} {fmtDollar(stats.saved * price / 1_000_000)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Compressed output */}
           <div className="flex items-center justify-between px-3.5 py-2" style={{ borderBottom: '1px solid #2a2a3a' }}>
             <span className="text-xs tracking-widest" style={{ color: '#8888aa' }}>COMPRESSED OUTPUT</span>
             {encoded && (
-              <button onClick={copyEncoded} className="text-xs px-2 py-0.5 cursor-pointer"
-                style={{ background: '#1a1a26', border: '1px solid #2a2a3a', color: '#00e676', fontFamily: 'inherit' }}>COPY</button>
+              <button onClick={copyEncoded} className="text-xs px-3 py-1 cursor-pointer font-bold tracking-wider"
+                style={{ background: copied ? '#00e676' : 'linear-gradient(135deg, #6c5ce7, #00e676)', color: copied ? '#0a0a0f' : '#fff', border: 'none', fontFamily: 'inherit', borderRadius: 3 }}>
+                {copied ? 'COPIED' : 'COPY'}
+              </button>
             )}
           </div>
           <div className="flex-1 overflow-auto">
@@ -136,51 +181,25 @@ export default function Codec() {
                 {encoded}
               </pre>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center gap-2 px-8 text-center" style={{ color: '#8888aa', opacity: 0.3 }}>
-                <div style={{ fontSize: '28px' }}>T$</div>
+              <div className="h-full flex flex-col items-center justify-center gap-3 px-8 text-center" style={{ color: '#8888aa', opacity: 0.4 }}>
+                <div style={{ fontSize: '32px' }}>T$</div>
                 <div className="text-xs">Paste text on the left and click COMPRESS</div>
               </div>
             )}
           </div>
 
-          {/* Stats bar */}
+          {/* Volume projection bar */}
           {stats && (
-            <div className="flex flex-col gap-1.5 px-3.5 py-2" style={{ borderTop: '1px solid #2a2a3a', background: '#12121a' }}>
-              <div className="flex gap-4 flex-wrap items-center">
-                <span className="text-xs" style={{ color: '#8888aa' }}>
-                  <b style={{ color: '#a29bfe' }}>{stats.inTok.toLocaleString()}</b> tok
-                  <span style={{ color: '#6c5ce7' }}>{' → '}</span>
-                  <b style={{ color: '#00e676' }}>{stats.outTok.toLocaleString()}</b> tok
-                </span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.1)', color: '#00e676', fontSize: '13px' }}>
-                  {stats.ratio}x compression
-                </span>
-                <span className="text-xs" style={{ color: '#8888aa' }}>{stats.time}s</span>
-              </div>
-              <div className="flex gap-3 flex-wrap items-center">
-                <span className="text-xs" style={{ color: '#8888aa' }}>Cost saved per call:</span>
-                {calcSaved(stats.saved).map(({ name, saved }) => (
-                  <span key={name} className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1a1a26', border: '1px solid #2a2a3a', color: saved > 0.001 ? '#00e676' : '#8888aa' }}>
-                    {name} <b>${saved < 0.0001 ? '<0.01' : saved < 0.01 ? saved.toFixed(4) : saved.toFixed(3)}</b>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Savings projection */}
-          {stats && (
-            <div className="flex gap-3 flex-wrap items-center px-3.5 py-1.5" style={{ borderTop: '1px solid #2a2a3a', background: 'rgba(0,230,118,0.03)' }}>
-              <span className="text-xs font-bold" style={{ color: '#00e676' }}>If you send {stats.ratio}x less tokens:</span>
-              {[100, 1000, 10000].map(n => {
-                const saved54pro = (stats.saved * n * 30 / 1_000_000);
+            <div className="flex gap-3 flex-wrap items-center px-3.5 py-2" style={{ borderTop: '1px solid #2a2a3a', background: '#12121a' }}>
+              <span className="text-xs font-bold" style={{ color: '#a29bfe' }}>At scale (GPT-5.4 Pro):</span>
+              {[100, 1000, 10000, 100000].map(n => {
+                const s = stats.saved * n * 30 / 1_000_000;
                 return (
                   <span key={n} className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.08)', color: '#00e676' }}>
-                    {n.toLocaleString()} calls = <b>${saved54pro < 1 ? saved54pro.toFixed(2) : saved54pro.toFixed(1)}</b>
+                    {n >= 1000 ? (n / 1000) + 'K' : n} calls <b>{fmtDollar(s)}</b>
                   </span>
                 );
               })}
-              <span className="text-xs" style={{ color: '#8888aa' }}>(GPT-5.4 Pro $30/M input)</span>
             </div>
           )}
         </div>
