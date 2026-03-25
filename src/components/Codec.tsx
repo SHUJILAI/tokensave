@@ -156,6 +156,16 @@ export default function Codec() {
     setEvalRunning(false);
   }
 
+  // Cost savings based on popular LLM input pricing (per 1M tokens)
+  const LLM_PRICES: Record<string, number> = {
+    'Claude Opus': 15, 'GPT-4o': 2.5, 'Claude Sonnet': 3, 'Gemini Pro': 1.25,
+  };
+  function calcSaved(tokens: number) {
+    return Object.entries(LLM_PRICES).map(([name, price]) => ({
+      name, saved: (tokens * price / 1_000_000),
+    }));
+  }
+
   function copyEncoded() {
     if (encoded) navigator.clipboard.writeText(encoded);
   }
@@ -173,10 +183,10 @@ export default function Codec() {
         {encCount > 0 && (
           <div className="flex gap-4 items-center">
             <span className="text-xs" style={{ color: '#8888aa' }}>
-              Total saved: <b style={{ color: '#00e676' }}>{cumSaved.toLocaleString()}</b> tokens across {encCount} encodes
+              Saved <b style={{ color: '#00e676' }}>{cumSaved.toLocaleString()}</b> tokens | <b style={{ color: '#00e676' }}>{(cumIn / cumOut).toFixed(1)}x</b> avg
             </span>
-            <span className="text-xs" style={{ color: '#8888aa' }}>
-              Avg: <b style={{ color: '#00e676' }}>{(cumIn / cumOut).toFixed(1)}x</b>
+            <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.15)', color: '#00e676', fontWeight: 'bold' }}>
+              ~${(cumSaved * 15 / 1_000_000).toFixed(4)} saved (Opus pricing)
             </span>
           </div>
         )}
@@ -241,19 +251,42 @@ export default function Codec() {
 
           {/* Stats bar */}
           {stats && (
-            <div className="flex gap-4 flex-wrap items-center px-3.5 py-2" style={{ borderTop: '1px solid #2a2a3a', background: '#12121a' }}>
-              <span className="text-xs" style={{ color: '#8888aa' }}>
-                <b style={{ color: '#a29bfe' }}>{stats.inTok.toLocaleString()}</b> tok
-                <span style={{ color: '#6c5ce7' }}>{' → '}</span>
-                <b style={{ color: '#00e676' }}>{stats.outTok.toLocaleString()}</b> tok
-              </span>
-              <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.1)', color: '#00e676', fontSize: '13px' }}>
-                {stats.ratio}x smaller
-              </span>
-              <span className="text-xs" style={{ color: '#8888aa' }}>
-                Saved <b style={{ color: '#00e676' }}>{stats.saved.toLocaleString()}</b> tokens
-              </span>
-              <span className="text-xs" style={{ color: '#8888aa' }}>{stats.time}s</span>
+            <div className="flex flex-col gap-1.5 px-3.5 py-2" style={{ borderTop: '1px solid #2a2a3a', background: '#12121a' }}>
+              <div className="flex gap-4 flex-wrap items-center">
+                <span className="text-xs" style={{ color: '#8888aa' }}>
+                  <b style={{ color: '#a29bfe' }}>{stats.inTok.toLocaleString()}</b> tok
+                  <span style={{ color: '#6c5ce7' }}>{' → '}</span>
+                  <b style={{ color: '#00e676' }}>{stats.outTok.toLocaleString()}</b> tok
+                </span>
+                <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.1)', color: '#00e676', fontSize: '13px' }}>
+                  {stats.ratio}x compression
+                </span>
+                <span className="text-xs" style={{ color: '#8888aa' }}>{stats.time}s</span>
+              </div>
+              <div className="flex gap-3 flex-wrap items-center">
+                <span className="text-xs" style={{ color: '#8888aa' }}>Cost saved per call:</span>
+                {calcSaved(stats.saved).map(({ name, saved }) => (
+                  <span key={name} className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1a1a26', border: '1px solid #2a2a3a', color: saved > 0.001 ? '#00e676' : '#8888aa' }}>
+                    {name} <b>${saved < 0.0001 ? '<0.01' : saved < 0.01 ? saved.toFixed(4) : saved.toFixed(3)}</b>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Savings projection */}
+          {stats && (
+            <div className="flex gap-3 flex-wrap items-center px-3.5 py-1.5" style={{ borderTop: '1px solid #2a2a3a', background: 'rgba(0,230,118,0.03)' }}>
+              <span className="text-xs font-bold" style={{ color: '#00e676' }}>If you send {stats.ratio}x less tokens:</span>
+              {[100, 1000, 10000].map(n => {
+                const opusSaved = (stats.saved * n * 15 / 1_000_000);
+                return (
+                  <span key={n} className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.08)', color: '#00e676' }}>
+                    {n.toLocaleString()} calls = <b>${opusSaved < 1 ? opusSaved.toFixed(2) : opusSaved.toFixed(1)}</b> saved
+                  </span>
+                );
+              })}
+              <span className="text-xs" style={{ color: '#8888aa' }}>(Opus $15/M tok)</span>
             </div>
           )}
 
