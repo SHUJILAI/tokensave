@@ -1,10 +1,48 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { estimateTokens } from '../lib/tokens';
 import { llm } from '../lib/llm';
 import { ENC_PROMPTS, SAMPLE_EN, SAMPLE_ZH } from '../lib/codebook';
-
 interface Stats {
   inTok: number; outTok: number; ratio: string; saved: number; time: string;
+}
+
+async function extractText(file: File): Promise<string> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+
+  // Plain text files
+  if (['txt', 'md', 'csv', 'json', 'xml', 'html', 'log', 'rst', 'tex'].includes(ext)) {
+    return file.text();
+  }
+
+  // PDF - dynamic import
+  if (ext === 'pdf') {
+    const pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pages: string[] = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      pages.push(content.items.map((item: any) => item.str).join(' '));
+    }
+    return pages.join('\n\n');
+  }
+
+  // DOCX - dynamic import
+  if (ext === 'docx') {
+    const mammoth = await import('mammoth');
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: buf });
+    return result.value;
+  }
+
+  // Fallback: try as text
+  try {
+    return await file.text();
+  } catch {
+    throw new Error(`Unsupported file type: .${ext}`);
+  }
 }
 
 export default function Codec() {
@@ -13,6 +51,9 @@ export default function Codec() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [encoding, setEncoding] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cumulative
   const [cumIn, setCumIn] = useState(0);
@@ -22,6 +63,38 @@ export default function Codec() {
 
   function loadSample(lang: 'en' | 'zh') {
     setInput(lang === 'en' ? SAMPLE_EN : SAMPLE_ZH);
+    setFileName('');
+  }
+
+  const handleFile = useCallback(async (file: File) => {
+    try {
+      const text = await extractText(file);
+      if (text.trim()) {
+        setInput(text);
+        setFileName(file.name);
+      } else {
+        setInput('(Empty file or could not extract text)');
+      }
+    } catch (e: any) {
+      setInput('Error reading file: ' + e.message);
+    }
+  }, []);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(true);
+  }
+
+  function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
   }
 
   async function encode() {
@@ -91,21 +164,39 @@ export default function Codec() {
       {/* Main panels */}
       <div className="flex-1 grid grid-cols-2 overflow-hidden" style={{ minHeight: 0 }}>
         {/* Input panel */}
-        <div className="flex flex-col overflow-hidden" style={{ borderRight: '1px solid #2a2a3a' }}>
+        <div className="flex flex-col overflow-hidden" style={{ borderRight: '1px solid #2a2a3a' }}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={() => setDragging(false)}>
           <div className="flex items-center justify-between px-3.5 py-2" style={{ borderBottom: '1px solid #2a2a3a' }}>
-            <span className="text-xs tracking-widest" style={{ color: '#8888aa' }}>PASTE YOUR TEXT</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs tracking-widest" style={{ color: '#8888aa' }}>PASTE OR DROP FILE</span>
+              {fileName && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1a1a26', border: '1px solid #2a2a3a', color: '#a29bfe' }}>{fileName}</span>}
+            </div>
             <span className="flex gap-1.5">
+              <button onClick={() => fileInputRef.current?.click()} className="text-xs px-2 py-0.5 cursor-pointer"
+                style={{ background: '#1a1a26', border: '1px solid #2a2a3a', color: '#a29bfe', fontFamily: 'inherit' }}>OPEN FILE</button>
               <button onClick={() => loadSample('en')} className="text-xs px-2 py-0.5 cursor-pointer"
                 style={{ background: '#1a1a26', border: '1px solid #2a2a3a', color: '#8888aa', fontFamily: 'inherit' }}>EN Demo</button>
               <button onClick={() => loadSample('zh')} className="text-xs px-2 py-0.5 cursor-pointer"
                 style={{ background: '#1a1a26', border: '1px solid #2a2a3a', color: '#8888aa', fontFamily: 'inherit' }}>ZH Demo</button>
             </span>
+            <input ref={fileInputRef} type="file" accept=".txt,.md,.pdf,.docx,.csv,.json,.xml,.html,.log,.rst,.tex" onChange={handleFileInput} style={{ display: 'none' }} />
           </div>
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto relative">
+            {dragging && (
+              <div className="absolute inset-0 flex items-center justify-center z-10"
+                style={{ background: 'rgba(108,92,231,0.15)', border: '2px dashed #6c5ce7' }}>
+                <div className="text-center">
+                  <div style={{ fontSize: '24px', color: '#a29bfe' }}>Drop file here</div>
+                  <div className="text-xs mt-1" style={{ color: '#8888aa' }}>.txt .md .pdf .docx .csv .json</div>
+                </div>
+              </div>
+            )}
             <textarea
               value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Paste any text here -- meeting notes, contracts, reports, emails...&#10;&#10;Then click COMPRESS to shrink it down to a fraction of the tokens.&#10;Send the compressed version to GPT-4, Claude, Gemini, etc."
+              onChange={e => { setInput(e.target.value); setFileName(''); }}
+              placeholder="Paste text or drag & drop a file here...&#10;&#10;Supports: .txt .md .pdf .docx .csv .json .html&#10;&#10;Then click COMPRESS to shrink it down to a fraction of the tokens.&#10;Send the compressed version to GPT-4, Claude, Gemini, etc."
               className="w-full h-full resize-none outline-none p-3"
               style={{ background: 'transparent', border: 'none', color: '#e0e0e8', fontFamily: 'inherit', fontSize: '11px', lineHeight: 1.7 }}
             />
@@ -116,7 +207,7 @@ export default function Codec() {
               style={{ background: encoding ? '#2a2a3a' : 'linear-gradient(135deg, #6c5ce7, #a29bfe)', color: '#fff', border: 'none', fontFamily: 'inherit', opacity: !input.trim() ? 0.3 : 1 }}>
               {encoding ? <><span className="spinner" />COMPRESSING...</> : 'COMPRESS'}
             </button>
-            <button onClick={() => { setInput(''); setEncoded(''); setStats(null); }}
+            <button onClick={() => { setInput(''); setEncoded(''); setStats(null); setFileName(''); }}
               className="px-3 py-1.5 text-xs cursor-pointer"
               style={{ background: 'transparent', border: '1px solid #2a2a3a', color: '#8888aa', fontFamily: 'inherit' }}>CLEAR</button>
             {input && <span className="text-xs self-center ml-2" style={{ color: '#8888aa' }}>{estimateTokens(input).toLocaleString()} tokens</span>}
