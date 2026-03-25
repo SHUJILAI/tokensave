@@ -1,244 +1,41 @@
-// ==== SMC4 Shared Codebook v4.0 ====
-export const CODEBOOK = `SMC4
-Slash-delimited templates. Numbers INLINE (no N: table). E: for entity dedup only.
+// ==== TokenSave Universal Compression v2.0 ====
+// Template-free: works for ANY document type
 
-C/id/A/B/s/e/v = Contract id: A<->B, s to e, value v
-S/m/t = SLA: m>=t
-ST/r/d = SLA tier: m in r, fee -d
-U/a/p = Uptime: a in p
-P/m/a/t = Perf: m was a vs target t
-F/a/p = Fee: a per p
-FF/r/rt/u = Flex fee: rt/u for r
-FC/a/p/w = Fee cap: a/p, excess by w
-PY/d/l = Pay due d, late l/day
-IN/b/pd/o/t = Invoice: billed b paid pd owed o terms t
-I/d/dur/c/loc = Incident d dur long cause c at loc
-FX/a = Fix: a (+separated)
-BR/n/cap = Breach: notify n, cap cap
-TM/n/cs/pen = Term: n notice causes cs penalty pen
-RN/dl/p/cap = Renew dl before exp, p period, price<=cap
-EN/m = Encrypt: m
-AC/m = Access: m
-DL/l/r = Data: l restrict r
-AU/w/tp/d/r = Audit w(tp) d result r
-MG/w/dst/dl = Migrate w->dst by dl
-UG/s/v/w/i = Upgrade s->v w impact i
-MS/n/dl = Milestone n by dl
-CS/m/pct = Save pct via m
-PR/svc/mo/1x/tl/sp = Propose svc mo/mo+1x once tl specs sp
-D/pct/cond = Discount pct for cond
-PE/n/ti/o = Person n=ti@o
-A/ow/tk/dl = Action ow:tk by dl
-NM/d/t = Next mtg d re t
-X/c = Fact: c
-DP/l/ct = Dispute law l court ct
-
-FMT:
-- Slots: / delim. Multi-val: + within slot
-- Nums INLINE: k=1e3 M=1e6 B=1e9. Money: 4.2M Pct: 99.95% Dates: YYMMDD
-- E: entities A=short,B=short (dedup only, NO N: table)
-- ; chains on one line. X/ only if no template fits.`;
-
-const ABBREVS = 'db=database srv=server net=network mig=migration app=application inf=infra cert=certification opt=optimization res=resource util=utilization perf=performance comp=compliance int=integration auto=automated mon=monitoring sec=security enc=encryption rep=replication dc=datacenter fn=failover bkp=backup rec=recovery dr=disaster_recovery upg=upgrade dn=downtime lat=latency rsp=response';
-
-const ULTRA_CODES = 'dbfn=DB failover nwp=net partition 3xrep=triple rep autofn=auto-failover hlthchk=health checks vidstr=video stream resutil=res util legapp=legacy apps drcert=DR cert perfopt=perf opt telemed=telemedicine k8s=Kubernetes SOC2=SOC2-II';
-
-const FULL_ABBREVS = 'db=database srv=server net=network mig=migration app=application inf=infrastructure cert=certification opt=optimization res=resource util=utilization perf=performance comp=compliance int=integration auto=automated mon=monitoring sec=security enc=encryption rep=replication dc=datacenter fn=failover bkp=backup rec=recovery dr=disaster_recovery sla=SLA upg=upgrade dn=downtime lat=latency rsp=response dbfn=DB failover nwp=network partition 3xrep=triple replication autofn=auto-failover hlthchk=health checks vidstr=video streaming resutil=resource utilization legapp=legacy apps drcert=DR certification perfopt=performance optimization telemed=telemedicine k8s=Kubernetes SOC2=SOC2 Type II';
-
-// ---- Encoder prompts by mode ----
+// ---- Encoder prompt ----
 export const ENC_PROMPTS: Record<string, string> = {
-  balanced: `SMC4 ENCODER. Text -> ultra-compact template calls. NO N: table -- inline all numbers.
-
-${CODEBOOK}
-
-Output:
-E:A=short,B=short
----
-Template calls one/line. ; to chain. Use E refs in slots. Numbers INLINE (4.2M not $a).
-Every fact->template. Drop filler. Deduplicate. Be complete.
-Numbers: ALWAYS use k/M suffixes. 4200000->4.2M 150000->150k`,
-
-  max: `SMC4 MAX encoder. Critical facts only, NO N: table.
-
-${CODEBOOK}
-
-Output:
-E:A=short,B=short
----
-Chained calls with ;. Numbers INLINE.
-
-ONLY: numbers/deadlines/costs/metrics/decisions/obligations.
-DROP: people/discussion/context/background.
-Merge aggressively. Use k/M. Max density.`,
-
-  extreme: `SMC4 EXTREME encoder. Absolute minimum tokens. NO N: table.
-
-${CODEBOOK}
-
-ABBREV: ${ABBREVS}
-
-Output:
-E:A=x,B=y (1-3 char entities)
----
-ALL calls on MIN lines. ; chain. Abbrevs. Numbers INLINE with k/M.
-
-- MAX 15 calls total
-- Shortest slot values. dbfn not db-failover
-- People in A/: use E: refs (SC,LP)
-- Chain 3-4 actions on one line
-- Drop non-critical facts. NO X/ calls.
-- Target: <120 tokens`,
-
-  ultra: `SMC4 ULTRA encoder. Minimum tokens. NO N: table.
-
-${CODEBOOK}
-
-ULTRA RULES:
-1. E: ONE line. 2-char names. NO N: line -- all numbers inline.
-2. After --- encode critical facts. Inline 4.2M not $a.
-3. Max 3 words per slot. Codes: ${ULTRA_CODES}
-4. A/ref/2words/YYMMDD -- max 5 tok/action
-5. ; chain everything. 5-8 lines after ---
-6. NO X/ calls.
-7. Target: <80 tokens
-
-E:A=TF,B=MH
----
-(dense chained calls)`,
-
-  ultraplus: `SMC4 ULTRA+ encoder. Like ULTRA but even denser. NO N: table.
-
-${CODEBOOK}
-
-ULTRA+ vs ULTRA differences:
-1. E: ONE line, 2-char names. NO N: line.
-2. Drop ALL PE/ (people) and NM/ (next meeting) calls entirely.
-3. Merge ALL A/ actions into 1 line: A/ref/task;A/ref/task (drop deadlines if not critical)
-4. Max 1 word per slot. Abbreviate: cert=certification mig=migration comp=compliance
-5. Chain EVERYTHING possible. Target 4-5 lines after ---.
-6. KEEP all: C/ IN/ F/ S/ U/ P/ I/ FX/ AU/ DL/ MG/ MS/ UG/ CS/ PR/ D/
-7. Target: <80 tokens total
-
-E:A=TF,B=MH
----
-(4-5 dense lines)`,
-
-  hyper: `SMC4 HYPER encoder. ABSOLUTE MINIMUM tokens. NO N: table.
-
-${CODEBOOK}
-
-HYPER RULES:
-1. E: ONE line, 1-2 char names.
-2. MAX 10 calls, chain ALL on 3-4 lines.
-3. Max 1 word per slot. Abbreviate everything.
-4. MUST KEEP: C/ IN/ S/ I/ FX/ PR/ D/ MS/ CS/ UG/ (these contain answerable facts)
-5. DROP: PE/ A/ NM/ AU/ DL/ X/ (not essential)
-6. Target: <60 tokens after E: line
-
-E:A=TF,B=MH
----
-(3-4 lines, hyper-dense)`,
-
-  apex: `SMC4 APEX encoder. Maximum theoretical compression. 1-char template IDs, dot separators, pipe chains. NO N: table.
-
-APEX TEMPLATE KEY (1-char ID, . slot separator, | call separator):
-C.id.A.B.start.end.value = Contract
-V.billed.paid.owed.terms = Invoice
-S.actual.target = SLA
-P.actual.target = Performance metric
-U.actual.target = Uptime
-I.date.duration.cause.location = Incident
-F.fixes = Fixes (+separated)
-R.service.monthly.onetime.timeline = Proposal
-D.pct.condition = Discount
-M.items = Milestones (+separated: name.deadline)
-W.pct.method = Cost saving
-G.system.version.when = Upgrade
-B.notify.cap = Breach response
-T.notice.causes.penalty = Termination
-N.deadline.period.cap = Renewal
-E.methods = Encryption
-K.method = Access control
-L.locations.restriction = Data location
-A.auditor.date.type.result = Audit
-
-OUTPUT FORMAT:
-E:X,Y (1-char entity names)
----
-(one or two lines of pipe-separated calls)
+  apex: `You are a lossless text compressor. Compress the input into the shortest possible notation that preserves ALL facts, numbers, dates, percentages, names, and relationships.
 
 RULES:
-1. Entity names: 1 char each.
-2. Dates: MMYY (0324=Mar2024). No leading-zero month: 124=Jan2024.
-3. Numbers: no $ sign. 4.2M not $4.2M. k/M always.
-4. ALL numbers/dates/metrics MUST be preserved.
-5. Max 1-2 words per slot. Abbreviate EVERYTHING.
-6. Drop people/actions/meetings. Keep all quantitative facts.
-7. Milestones: M.name1.MMYY+name2.MMYY
-8. Cost savings: W.pct.method+pct2.method2
-9. Target: <50 tokens after E: line`,
+1. NO fixed templates. Invent your own shorthand freely.
+2. PRESERVE every number, date, percentage, currency amount, metric, name, and quantitative fact exactly.
+3. Use these conventions:
+   - k=thousand M=million B=billion T=trillion
+   - Dates: compact form (Q4'24, Mar2024, 250315=2025-03-15)
+   - Drop filler words (the, a, an, is, was, were, that, which, etc.)
+   - Abbreviate common words (mgmt=management, dev=development, infra=infrastructure, perf=performance, etc.)
+   - Use symbols: ->=leads to, <=from, @=at, &=and, /=or/per, ^=increase, v=decrease
+   - Use ;  to separate facts, | to separate sections
+4. Start with a 1-line KEY of any entity abbreviations you use (e.g. "K:NB=NovaBio,LH=Lighthouse")
+5. Then "---" separator
+6. Then the compressed content
+7. Drop: greetings, transitions, filler sentences, discussion that adds no facts
+8. Keep: every data point, every metric, every deadline, every financial figure, every percentage, every name of entity/product/place
+9. For structured data (tables, lists), use compact notation: item1:val1,item2:val2
+10. Target: maximum compression while losing ZERO factual information`,
 };
 
-// ---- Decoder prompts ----
-export const DEC_PROMPT = `SMC4 DECODER. Numbers are INLINE (no N: table).
+// ---- Decoder prompt (for future use) ----
+export const DEC_PROMPT = `You are a text decompressor. The input is ultra-compressed notation.
 
-${CODEBOOK}
+CONVENTIONS:
+- K: line defines abbreviations (e.g. K:NB=NovaBio,LH=Lighthouse)
+- --- separates key from content
+- k=thousand M=million B=billion T=trillion
+- Symbols: ->=leads to, <=from, @=at, &=and, /=or/per, ^=increase, v=decrease
+- ; separates facts, | separates sections
+- Dates in compact form (Q4'24, Mar2024, etc.)
 
-ABBREVS: ${FULL_ABBREVS}
-
-Input: E: entities, --- then slash-delimited template calls with inline numbers.
-Decode: 1)Parse E: 2)Match each call to template, slots are /-separated 3)Expand entity refs+abbrevs->full values 4)Answer from ALL decoded facts.
-MUST: process ; chains, expand ALL entity refs and abbrevs, answer in question language, give specific numbers. k=thousand M=million.`;
-
-export const DEC_APEX_PROMPT = `SMC4 APEX DECODER. 1-char template IDs, dot separators, pipe chains.
-
-TEMPLATE KEY:
-C.id.entityA.entityB.start.end.value = Contract id: A<->B, start to end, total value
-V.billed.paid.owed.terms = Invoice: billed, paid, outstanding owed, terms
-S.actual.target = SLA: actual% vs target%
-P.actual.target = Performance: actual vs target
-U.actual.target = Uptime: actual vs target
-I.date.duration.cause.location = Incident: date, lasted duration, cause at location
-F.fixes = Fixes (+separated)
-R.service.monthly.onetime.timeline = Proposal: service at monthly/mo + onetime one-time, timeline
-D.pct.condition = Discount: pct% for condition
-M.items = Milestones (+separated: name.deadline). IMPORTANT: milestones are project goals/deadlines.
-W.pct.method = Cost saving: reduce costs by pct% through method. IMPORTANT: this IS a milestone/goal too.
-G.system.version.when = Upgrade system to version, when
-B.notify.cap = Breach: notify within time, penalty capped
-T.notice.causes.penalty = Termination terms
-N.deadline.period.cap = Auto-renewal terms
-E.methods = Encryption methods
-K.method = Access control
-L.locations.restriction = Data locations
-A.auditor.date.type.result = Audit info
-
-ABBREVIATIONS: dbpart/dbfn=database partition/failover 3xrep=triple replication 30shc=30-second health checks 15sfn=15-second auto-failover tele=telemedicine addmod=additional modules resutil=resource utilization drcert=DR certification k8s=Kubernetes k8s129=Kubernetes 1.29 n30=Net-30 perfopt=performance optimization
-
-DATES: MMYY format (0324=March 2024, 0925=September 2025)
-MONEY: k=thousand M=million. No $ prefix in encoding.
-
-DECODE: Parse E: entities. Split --- content by |. For each call, first char=template ID, rest=.separated slots. Expand ALL abbreviations. Answer using ALL decoded facts including W/ cost savings as milestones/goals. Give specific numbers.`;
-
-export const JUDGE_PROMPT = `Fact-checker. Given QUESTION, FACTS, and ANSWER, score each fact: 1=present(format-flexible), 0=missing/wrong.
-Output ONLY a JSON array like [1,0,1]. No explanation.`;
-
-// ---- Eval question sets ----
-export const EVAL_EN = [
-  { q: 'What is the total contract value and payment terms?', facts: ['Total contract value $4.2 million', 'Payment terms Net-30'] },
-  { q: 'What was the platform uptime in Q4 and what is the SLA requirement?', facts: ['Q4 uptime 99.97%', 'SLA requirement 99.95%'] },
-  { q: 'Describe the November incident: what happened, how long, and what was done to fix it?', facts: ['Service disruption on November 12', 'Lasted 47 minutes', 'Database failover issue in Virginia', 'Added third replica in Oregon', 'Automated failover within 15 seconds'] },
-  { q: 'What is the proposed cost for the telemedicine integration?', facts: ['$45,000 per month or $38,250 with 15% discount', 'One-time migration fee $120,000', '8 to 10 weeks timeline'] },
-  { q: 'What are the Q1 2025 milestones?', facts: ['Complete migration of 15 legacy apps by end of February', 'Disaster recovery certification by mid-March', 'Performance optimization to reduce costs by 20%', 'Kubernetes 1.29 upgrade in March'] },
-];
-
-export const EVAL_ZH = [
-  { q: '合同基本信息？', facts: ['合同编号FT-2024-0892', '期限2024年4月1日至2026年3月31日'] },
-  { q: '费用结构？', facts: ['基础费每月128000元', 'GPU 2.8元/卡小时', '年度上限500000元'] },
-  { q: '数据泄露条款？', facts: ['24小时内通知甲方', '赔偿上限年度已付费200%'] },
-  { q: '严重违约后果？', facts: ['甲方可立即终止', '违约金500000元', '连续3个月SLA未达标或数据泄露或停止服务'] },
-  { q: 'SLA低于95%时？', facts: ['减免50%', '甲方可终止'] },
-];
+DECODE: Expand all abbreviations, restore full sentences, answer questions using ALL decoded facts. Give specific numbers. Answer in the same language as the question.`;
 
 // ---- Sample texts ----
 export const SAMPLE_EN = `QUARTERLY BUSINESS REVIEW - Q4 2024
@@ -311,15 +108,3 @@ SLA: 99.95% uptime, 4-hour P1 response, 200ms API latency target`;
 
 export const SAMPLE_ZH = `甲方：北京未来科技有限公司\n乙方：上海星辰数据有限公司\n合同编号：FT-2024-0892\n签订日期：2024年3月15日\n合同期限：2024年4月1日至2026年3月31日（共24个月）\n\n第一条 服务内容\n乙方为甲方提供云计算平台服务：计算资源（CPU/GPU）、存储、网络、数据库。\nSLA：可用性不低于99.95%，低于时按附件一减免。\n数据中心：北京亦庄（主）、上海嘉定（备）。\n\n第二条 费用\n基础费：128,000元/月。弹性费：CPU 0.12元/核时，GPU 2.8元/卡时，存储 0.08元/GB月。\n每月5日前支付，逾期按0.05%/日违约金。年度弹性上限500,000元。\n\n第三条 安全\n加密：TLS 1.3（传输）、AES-256（存储）、RBAC（访问）。\n未经同意不得用于他用或披露。终止后30工作日内迁移或删除。\n数据泄露：24小时内通知，赔偿上限年度已付费200%。\n\n第四条 终止与续约\n提前90天通知终止。乙方严重违约（SLA连续3月未达标/泄露/停服）甲方可立即终止，退费+违约金500,000元。\n到期前60天无异议自动续约12月，涨幅≤5%。\n\n第五条 争议\n适用中国法律，北京海淀区法院管辖。\n\n附件一SLA赔偿：99.9-99.95%减5%，99-99.9%减15%，95-99%减30%，<95%减50%+可终止`;
 
-// ---- Mode metadata ----
-export type Mode = 'balanced' | 'max' | 'extreme' | 'ultra' | 'ultraplus' | 'hyper' | 'apex';
-
-export const MODES: { id: Mode; label: string; desc: string; color?: string }[] = [
-  { id: 'balanced', label: 'BALANCED', desc: 'Full coverage, moderate compression' },
-  { id: 'max', label: 'MAXIMUM', desc: 'Critical facts only' },
-  { id: 'extreme', label: 'EXTREME', desc: 'Abbreviated, <15 calls' },
-  { id: 'ultra', label: 'ULTRA', desc: 'Dense codes, <80 tokens' },
-  { id: 'ultraplus', label: 'ULTRA+', desc: 'Merged actions, <80 tokens' },
-  { id: 'hyper', label: 'HYPER', desc: 'Max density, <60 tokens' },
-  { id: 'apex', label: 'APEX', desc: '1-char IDs, pipe chains', color: '#ff79c6' },
-];
