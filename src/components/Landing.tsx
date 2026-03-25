@@ -45,17 +45,34 @@ export default function Landing({ onStart }: { onStart: () => void }) {
         ))}
       </div>
 
-      {/* CTA */}
-      <button onClick={onStart}
-        className="px-8 py-3 rounded-lg font-bold text-sm tracking-wider cursor-pointer transition-all duration-200 hover:scale-105"
-        style={{
-          background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)',
-          color: '#fff',
-          border: 'none',
-          boxShadow: '0 0 30px rgba(108,92,231,0.4)',
-        }}>
-        START COMPRESSING
-      </button>
+      {/* CTA buttons */}
+      <div className="flex gap-4 items-center">
+        <button onClick={onStart}
+          className="px-8 py-3 rounded-lg font-bold text-sm tracking-wider cursor-pointer transition-all duration-200 hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)',
+            color: '#fff',
+            border: 'none',
+            boxShadow: '0 0 30px rgba(108,92,231,0.4)',
+          }}>
+          START COMPRESSING
+        </button>
+        <a href="https://github.com/SHUJILAI/tokensave/releases" target="_blank" rel="noopener noreferrer"
+          className="px-6 py-3 rounded-lg font-bold text-sm tracking-wider cursor-pointer transition-all duration-200 hover:scale-105 no-underline"
+          style={{
+            background: 'transparent',
+            color: '#a29bfe',
+            border: '1px solid #6c5ce7',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5l3.5 4h-2.25v3.25h-2.5V7.5H4.5L8 3.5z" transform="rotate(180 8 8)"/>
+          </svg>
+          DOWNLOAD APP
+        </a>
+      </div>
 
       {/* How it works */}
       <div className="mt-16 max-w-2xl w-full">
