@@ -157,8 +157,9 @@ export default function Codec() {
   }
 
   // Cost savings based on popular LLM input pricing (per 1M tokens)
+  // Input pricing per 1M tokens (latest expensive models)
   const LLM_PRICES: Record<string, number> = {
-    'Claude Opus': 15, 'GPT-4o': 2.5, 'Claude Sonnet': 3, 'Gemini Pro': 1.25,
+    'GPT-4.5': 75, 'Claude Opus 4': 15, 'o3': 10, 'Gemini 2.5 Pro': 1.25,
   };
   function calcSaved(tokens: number) {
     return Object.entries(LLM_PRICES).map(([name, price]) => ({
@@ -186,7 +187,7 @@ export default function Codec() {
               Saved <b style={{ color: '#00e676' }}>{cumSaved.toLocaleString()}</b> tokens | <b style={{ color: '#00e676' }}>{(cumIn / cumOut).toFixed(1)}x</b> avg
             </span>
             <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.15)', color: '#00e676', fontWeight: 'bold' }}>
-              ~${(cumSaved * 15 / 1_000_000).toFixed(4)} saved (Opus pricing)
+              ~${(cumSaved * 75 / 1_000_000).toFixed(4)} saved (GPT-4.5 pricing)
             </span>
           </div>
         )}
@@ -279,14 +280,14 @@ export default function Codec() {
             <div className="flex gap-3 flex-wrap items-center px-3.5 py-1.5" style={{ borderTop: '1px solid #2a2a3a', background: 'rgba(0,230,118,0.03)' }}>
               <span className="text-xs font-bold" style={{ color: '#00e676' }}>If you send {stats.ratio}x less tokens:</span>
               {[100, 1000, 10000].map(n => {
-                const opusSaved = (stats.saved * n * 15 / 1_000_000);
+                const gpt45Saved = (stats.saved * n * 75 / 1_000_000);
                 return (
                   <span key={n} className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,230,118,0.08)', color: '#00e676' }}>
-                    {n.toLocaleString()} calls = <b>${opusSaved < 1 ? opusSaved.toFixed(2) : opusSaved.toFixed(1)}</b> saved
+                    {n.toLocaleString()} calls = <b>${gpt45Saved < 1 ? gpt45Saved.toFixed(2) : gpt45Saved.toFixed(1)}</b>
                   </span>
                 );
               })}
-              <span className="text-xs" style={{ color: '#8888aa' }}>(Opus $15/M tok)</span>
+              <span className="text-xs" style={{ color: '#8888aa' }}>(GPT-4.5 $75/M tok)</span>
             </div>
           )}
 
