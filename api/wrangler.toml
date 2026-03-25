@@ -1,0 +1,7 @@
+name = "tokensave-api"
+main = "src/index.ts"
+compatibility_date = "2025-03-20"
+
+# Secrets (set via `wrangler secret put`):
+# AI_GATEWAY_KEY - AI Gateway API key
+# API_KEYS - comma-separated list of valid API keys
