@@ -23,8 +23,7 @@
       "electron/**/*"
     ],
     "mac": {
-      "target": "dmg",
-      "icon": "public/favicon.svg"
+      "target": "dmg"
     },
     "win": {
       "target": "nsis"
