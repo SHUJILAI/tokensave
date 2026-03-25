@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; }
+html, body {
+  width: 60px; height: 60px;
+  overflow: hidden;
+  background: transparent;
+  -webkit-app-region: drag;
+  cursor: grab;
+}
+.ball {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c5ce7, #00e676);
+  display: flex; align-items: center; justify-content: center;
+  margin: 2px;
+  box-shadow: 0 2px 20px rgba(108,92,231,0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+  -webkit-app-region: drag;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+.ball:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 30px rgba(108,92,231,0.8);
+  -webkit-app-region: no-drag;
+  cursor: pointer;
+}
+.ball span {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 18px;
+  font-weight: bold;
+  color: #0a0a0f;
+  pointer-events: none;
+  user-select: none;
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 2px 20px rgba(108,92,231,0.4); }
+  50% { box-shadow: 0 4px 30px rgba(0,230,118,0.5); }
+}
+</style>
+</head>
+<body>
+<div class="ball"><span>T$</span></div>
+</body>
+</html>
