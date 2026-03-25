@@ -1,6 +1,6 @@
 const API_URL = 'https://ai-gateway.happycapy.ai/api/v1/chat/completions';
 const API_KEY = '005cbe34ac934822854f1420b86fb83b';
-const MODEL = 'anthropic/claude-sonnet-4.6';
+const MODEL = 'anthropic/claude-haiku-4.5';
 
 export async function llm(
   messages: { role: string; content: string }[],
